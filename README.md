@@ -1,30 +1,30 @@
 # FQDNGuard
 
-Allow connections only when players join via a specific FQDN (e.g., mc.example.com). Direct IP connections automatically rejected.
+特定の FQDN、例: `mc.example.com`、から接続したプレイヤーのみを許可する Velocity プラグインです。直接 IP アドレスで接続した場合は自動的に拒否します。
 
-[日本語 README](README-ja.md)
+[English README](README-en.md)
 
-## Requirements
+## 要件
 
-- Velocity 3.5.0-SNAPSHOT API compatible proxy
+- Velocity 3.5.0-SNAPSHOT API 互換のプロキシ
 - Java 21+
 
-## Build
+## ビルド
 
 ```sh
 gradle build
 ```
 
-The plugin jar is created at `build/libs/FQDNGuard-0.1.0.jar`.
+プラグイン JAR は `build/libs/FQDNGuard-0.1.0.jar` に生成されます。
 
-## Install
+## 導入
 
-1. Copy the jar to the Velocity `plugins/` directory.
-2. Start the proxy once to generate `plugins/fqdn-guard/fqdn-guard.yml`.
-3. Add allowed domains to `allowed-hosts`.
-4. Restart the proxy.
+1. 生成された JAR を Velocity の `plugins/` ディレクトリにコピーします。
+2. プロキシを一度起動し、`plugins/fqdn-guard/fqdn-guard.yml` を生成します。
+3. `allowed-hosts` に接続を許可するドメインを追加します。
+4. プロキシを再起動します。
 
-Example:
+設定例:
 
 ```yaml
 allowed-hosts:
@@ -35,4 +35,4 @@ kick-message: "Please connect through {allowed_hosts}. Direct IP connections are
 log-rejections: true
 ```
 
-Players joining through any host not listed in `allowed-hosts`, including direct IP joins, are rejected during pre-login.
+`allowed-hosts` に含まれないホスト名で参加したプレイヤーは、直接 IP 接続を含め、ログイン前に拒否されます。
