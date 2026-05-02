@@ -1,5 +1,6 @@
 plugins {
     java
+    id("com.diffplug.spotless") version "8.4.0"
 }
 
 group = "com.github.isksss"
@@ -14,6 +15,12 @@ java {
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.5.0-SNAPSHOT")
     annotationProcessor("com.velocitypowered:velocity-api:3.5.0-SNAPSHOT")
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
 }
 
 tasks {
