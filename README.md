@@ -12,10 +12,15 @@
 ## ビルド
 
 ```sh
-gradle build
+./gradlew build
 ```
 
 プラグイン JAR は `build/libs/FQDNGuard-0.1.0.jar` に生成されます。
+
+## CI
+
+GitHub Actions で Pull Request と `main` への push 時に、JUnit テストと Spotless のフォーマットチェックを実行します。
+`main` へのマージを制限するには、GitHub の branch protection rule または ruleset で `Gradle CI / Test and format` を必須ステータスチェックに設定してください。
 
 ## 導入
 

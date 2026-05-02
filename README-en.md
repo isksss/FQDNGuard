@@ -12,10 +12,15 @@ Allow connections only when players join via a specific FQDN (e.g., mc.example.c
 ## Build
 
 ```sh
-gradle build
+./gradlew build
 ```
 
 The plugin jar is created at `build/libs/FQDNGuard-0.1.0.jar`.
+
+## CI
+
+GitHub Actions runs JUnit tests and Spotless formatting checks on pull requests and pushes to `main`.
+To block merges into `main`, configure a GitHub branch protection rule or ruleset and require the `Gradle CI / Test and format` status check.
 
 ## Install
 
