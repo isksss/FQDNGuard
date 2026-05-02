@@ -20,16 +20,19 @@ gradle build
 ## 導入
 
 1. 生成された JAR を Velocity の `plugins/` ディレクトリにコピーします。
-2. プロキシを一度起動し、`plugins/fqdn-guard/fqdn-guard.properties` を生成します。
-3. `allowed-hosts` を接続を許可するドメインに変更します。
+2. プロキシを一度起動し、`plugins/fqdn-guard/fqdn-guard.yml` を生成します。
+3. `allowed-hosts` に接続を許可するドメインを追加します。
 4. プロキシを再起動します。
 
 設定例:
 
-```properties
-allowed-hosts=mc.example.com,play.example.com
-kick-message=Please connect through {allowed_hosts}. Direct IP connections are not allowed.
-log-rejections=true
+```yaml
+allowed-hosts:
+  - mc.example.com
+  - play.example.com
+
+kick-message: "Please connect through {allowed_hosts}. Direct IP connections are not allowed."
+log-rejections: true
 ```
 
 `allowed-hosts` に含まれないホスト名で参加したプレイヤーは、直接 IP 接続を含め、ログイン前に拒否されます。

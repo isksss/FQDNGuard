@@ -1,0 +1,10 @@
+# FQDNs that players are allowed to use when joining.
+allowed-hosts:
+  - mc.example.com
+  # - play.example.com
+
+# Placeholders: {host}, {allowed_hosts}
+kick-message: "Please connect through {allowed_hosts}. Direct IP connections are not allowed."
+
+# Log rejected connection attempts to the proxy console.
+log-rejections: true
