@@ -1,0 +1,35 @@
+# FQDNGuard
+
+特定の FQDN、例: `mc.example.com`、から接続したプレイヤーのみを許可する Velocity プラグインです。直接 IP アドレスで接続した場合は自動的に拒否します。
+
+[English README](README.md)
+
+## 要件
+
+- Velocity 3.5.0-SNAPSHOT API 互換のプロキシ
+- Java 21+
+
+## ビルド
+
+```sh
+gradle build
+```
+
+プラグイン JAR は `build/libs/FQDNGuard-0.1.0.jar` に生成されます。
+
+## 導入
+
+1. 生成された JAR を Velocity の `plugins/` ディレクトリにコピーします。
+2. プロキシを一度起動し、`plugins/fqdn-guard/fqdn-guard.properties` を生成します。
+3. `allowed-hosts` を接続を許可するドメインに変更します。
+4. プロキシを再起動します。
+
+設定例:
+
+```properties
+allowed-hosts=mc.example.com,play.example.com
+kick-message=Please connect through {allowed_hosts}. Direct IP connections are not allowed.
+log-rejections=true
+```
+
+`allowed-hosts` に含まれないホスト名で参加したプレイヤーは、直接 IP 接続を含め、ログイン前に拒否されます。
