@@ -24,7 +24,8 @@ public final class FQDNGuardPlugin {
   private final Logger logger;
   private final Path dataDirectory;
 
-  private FQDNGuardConfig config = new FQDNGuardConfig(Collections.emptySet(), "", false);
+  private FQDNGuardConfig config =
+      new FQDNGuardConfig(Collections.emptySet(), Collections.emptySet(), "", false);
 
   /**
    * FQDNGuard プラグインを生成する。
@@ -66,6 +67,11 @@ public final class FQDNGuardPlugin {
       return;
     }
 
+    String remoteIp = IpNormalizer.normalize(event.getConnection().getRemoteAddress());
+    if (config.allowedIps().contains(remoteIp)) {
+      return;
+    }
+
     String host = virtualHost.filter(value -> !value.isBlank()).orElse("unknown");
     if (config.logRejections()) {
       logger.info(
@@ -80,11 +86,14 @@ public final class FQDNGuardPlugin {
             Component.text(config.formatKickMessage(host))));
   }
 
-  /** 設定ファイルを用意し、許可ホスト、拒否メッセージ、拒否ログ設定を読み込む。 */
+  /** 設定ファイルを用意し、許可ホスト、許可 IP、拒否メッセージ、拒否ログ設定を読み込む。 */
   private void loadConfig() {
     try {
       config = FQDNGuardConfigLoader.load(dataDirectory);
-      logger.info("FQDNGuard enabled. Allowed hosts: {}", String.join(", ", config.allowedHosts()));
+      logger.info(
+          "FQDNGuard enabled. Allowed hosts: {}. Allowed IPs: {}",
+          String.join(", ", config.allowedHosts()),
+          String.join(", ", config.allowedIps()));
     } catch (IOException exception) {
       applyFallbackConfig(exception);
     }
@@ -101,7 +110,12 @@ public final class FQDNGuardPlugin {
       logger.error(
           "Failed to load FQDNGuard config. Falling back to bundled default config.", exception);
     } catch (IOException fallbackException) {
-      config = new FQDNGuardConfig(Collections.emptySet(), "FQDNGuard configuration failed.", true);
+      config =
+          new FQDNGuardConfig(
+              Collections.emptySet(),
+              Collections.emptySet(),
+              "FQDNGuard configuration failed.",
+              true);
       logger.error("Failed to load FQDNGuard config.", exception);
       logger.error("Failed to load bundled default config.", fallbackException);
     }

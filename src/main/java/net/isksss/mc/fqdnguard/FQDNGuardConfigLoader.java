@@ -15,10 +15,11 @@ final class FQDNGuardConfigLoader {
   private static final String CONFIG_FILE_NAME = "fqdn-guard.yml";
   private static final String DEFAULT_CONFIG_RESOURCE = "/" + CONFIG_FILE_NAME;
   private static final String ALLOWED_HOSTS_KEY = "allowed-hosts";
+  private static final String ALLOWED_IPS_KEY = "allowed-ips";
   private static final String KICK_MESSAGE_KEY = "kick-message";
   private static final String LOG_REJECTIONS_KEY = "log-rejections";
   private static final FQDNGuardConfig EMPTY_DEFAULT =
-      new FQDNGuardConfig(Collections.emptySet(), "", false);
+      new FQDNGuardConfig(Collections.emptySet(), Collections.emptySet(), "", false);
 
   private FQDNGuardConfigLoader() {}
 
@@ -41,7 +42,10 @@ final class FQDNGuardConfigLoader {
     FQDNGuardConfig config = parseConfig(configPath, defaultConfig);
     if (config.allowedHosts().isEmpty()) {
       return new FQDNGuardConfig(
-          defaultConfig.allowedHosts(), config.kickMessage(), config.logRejections());
+          defaultConfig.allowedHosts(),
+          config.allowedIps(),
+          config.kickMessage(),
+          config.logRejections());
     }
     return config;
   }
@@ -102,6 +106,7 @@ final class FQDNGuardConfigLoader {
    */
   static FQDNGuardConfig parseConfigLines(List<String> lines, FQDNGuardConfig defaultConfig) {
     Set<String> hosts = new LinkedHashSet<>();
+    Set<String> ips = new LinkedHashSet<>();
     String configuredKickMessage = defaultConfig.kickMessage();
     boolean configuredLogRejections = defaultConfig.logRejections();
     String currentListKey = "";
@@ -115,6 +120,8 @@ final class FQDNGuardConfigLoader {
       if (value.startsWith("-")) {
         if (ALLOWED_HOSTS_KEY.equals(currentListKey)) {
           addAllowedHost(hosts, unquote(value.substring(1).trim()));
+        } else if (ALLOWED_IPS_KEY.equals(currentListKey)) {
+          addAllowedIp(ips, unquote(value.substring(1).trim()));
         }
         continue;
       }
@@ -131,6 +138,8 @@ final class FQDNGuardConfigLoader {
 
       if (ALLOWED_HOSTS_KEY.equals(key) && !rawValue.isEmpty()) {
         addAllowedHost(hosts, rawValue);
+      } else if (ALLOWED_IPS_KEY.equals(key) && !rawValue.isEmpty()) {
+        addAllowedIp(ips, rawValue);
       } else if (KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
         configuredKickMessage = rawValue;
       } else if (LOG_REJECTIONS_KEY.equals(key) && !rawValue.isEmpty()) {
@@ -139,7 +148,10 @@ final class FQDNGuardConfigLoader {
     }
 
     return new FQDNGuardConfig(
-        Collections.unmodifiableSet(hosts), configuredKickMessage, configuredLogRejections);
+        Collections.unmodifiableSet(hosts),
+        Collections.unmodifiableSet(ips),
+        configuredKickMessage,
+        configuredLogRejections);
   }
 
   /**
@@ -152,6 +164,19 @@ final class FQDNGuardConfigLoader {
     String normalizedHost = HostNormalizer.normalize(host);
     if (!normalizedHost.isBlank()) {
       hosts.add(normalizedHost);
+    }
+  }
+
+  /**
+   * 許可 IP 候補を正規化し、空でなければ許可 IP 集合へ追加する。
+   *
+   * @param ips 追加先の許可 IP 集合
+   * @param ip 許可 IP 候補
+   */
+  private static void addAllowedIp(Set<String> ips, String ip) {
+    String normalizedIp = IpNormalizer.normalize(ip);
+    if (!normalizedIp.isBlank()) {
+      ips.add(normalizedIp);
     }
   }
 

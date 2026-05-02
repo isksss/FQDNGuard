@@ -82,7 +82,7 @@ class FQDNGuardConfigLoaderTest {
   @DisplayName("未指定の任意項目はデフォルト設定を使う")
   void parseConfigLinesUsesDefaultValuesForMissingOptionalKeys() {
     FQDNGuardConfig defaultConfig =
-        new FQDNGuardConfig(Set.of("default.example.com"), "Default {host}", true);
+        new FQDNGuardConfig(Set.of("default.example.com"), Set.of(), "Default {host}", true);
 
     FQDNGuardConfig config =
         FQDNGuardConfigLoader.parseConfigLines(
@@ -93,6 +93,34 @@ class FQDNGuardConfigLoaderTest {
     assertEquals(
         "Default {host}", config.kickMessage(), "kick-message が未指定の場合はデフォルト設定の値を使う必要があります。");
     assertTrue(config.logRejections(), "log-rejections が未指定の場合はデフォルト設定の値を使う必要があります。");
+  }
+
+  /**
+   * YAML のリスト形式で書かれた許可 IP が読み込まれ、比較用に正規化されることを確認する。
+   *
+   * <p>期待結果: {@code allowed-ips} から IPv4 と IPv6 の許可 IP 一覧が得られる。
+   */
+  @Test
+  @DisplayName("YAML の許可 IP リストを読み込み正規化する")
+  void loadParsesYamlListAndNormalizesIps() throws IOException {
+    Path configPath = temporaryDirectory.resolve("fqdn-guard.yml");
+    Files.writeString(
+        configPath,
+        """
+        allowed-hosts:
+          - mc.example.com
+        allowed-ips:
+          - 127.0.0.1
+          - "::1"
+        """,
+        StandardCharsets.UTF_8);
+
+    FQDNGuardConfig config = FQDNGuardConfigLoader.load(temporaryDirectory);
+
+    assertEquals(
+        Set.of("127.0.0.1", "0:0:0:0:0:0:0:1"),
+        config.allowedIps(),
+        "YAML の allowed-ips は正規化された IP 集合として読み込まれる必要があります。");
   }
 
   /**

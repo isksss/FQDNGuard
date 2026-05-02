@@ -22,6 +22,7 @@ class FQDNGuardConfigTest {
     FQDNGuardConfig config =
         new FQDNGuardConfig(
             new LinkedHashSet<>(Arrays.asList("mc.example.com", "play.example.com")),
+            new LinkedHashSet<>(),
             "Use {allowed_hosts}. You used {host}.",
             true);
 

@@ -3,7 +3,8 @@ package net.isksss.mc.fqdnguard;
 import java.util.Set;
 
 /** FQDNGuard の設定値を保持する。 */
-record FQDNGuardConfig(Set<String> allowedHosts, String kickMessage, boolean logRejections) {
+record FQDNGuardConfig(
+    Set<String> allowedHosts, Set<String> allowedIps, String kickMessage, boolean logRejections) {
 
   /**
    * 拒否メッセージのプレースホルダーを実際の値へ置換する。

@@ -3,6 +3,10 @@ allowed-hosts:
   - mc.example.com
   # - play.example.com
 
+# Source IP addresses that are allowed even when the joined host is not allowed.
+allowed-ips:
+  - 127.0.0.1
+
 # Placeholders: {host}, {allowed_hosts}
 kick-message: "Please connect through {allowed_hosts}. Direct IP connections are not allowed."
 

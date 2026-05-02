@@ -3,7 +3,7 @@ plugins {
     id("com.diffplug.spotless") version "8.4.0"
 }
 
-group = "com.github.isksss"
+group = "net.isksss.mc.fqdnguard"
 version = "0.1.0"
 
 java {
