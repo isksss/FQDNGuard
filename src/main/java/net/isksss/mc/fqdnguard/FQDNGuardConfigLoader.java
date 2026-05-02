@@ -18,11 +18,10 @@ final class FQDNGuardConfigLoader {
   private static final String ALLOWED_IPS_KEY = "allowed-ips";
   private static final String KICK_MESSAGE_KEY = "kick-message";
   private static final String LOG_REJECTIONS_KEY = "log-rejections";
-  private static final FQDNGuardConfig EMPTY_DEFAULT = new FQDNGuardConfig(Collections.emptySet(),
-      Collections.emptySet(), "", false);
+  private static final FQDNGuardConfig EMPTY_DEFAULT =
+      new FQDNGuardConfig(Collections.emptySet(), Collections.emptySet(), "", false);
 
-  private FQDNGuardConfigLoader() {
-  }
+  private FQDNGuardConfigLoader() {}
 
   /**
    * 設定ファイルを用意し、設定値を読み込む。
@@ -58,7 +57,8 @@ final class FQDNGuardConfigLoader {
    * @throws IOException デフォルト設定が見つからない、または読み込めない場合
    */
   static FQDNGuardConfig loadDefaultConfig() throws IOException {
-    try (InputStream inputStream = FQDNGuardConfigLoader.class.getResourceAsStream(DEFAULT_CONFIG_RESOURCE)) {
+    try (InputStream inputStream =
+        FQDNGuardConfigLoader.class.getResourceAsStream(DEFAULT_CONFIG_RESOURCE)) {
       if (inputStream == null) {
         throw new IOException("Default config resource not found: " + DEFAULT_CONFIG_RESOURCE);
       }
@@ -75,7 +75,8 @@ final class FQDNGuardConfigLoader {
    * @throws IOException デフォルト設定の取得またはコピーに失敗した場合
    */
   static void copyDefaultConfig(Path configPath) throws IOException {
-    try (InputStream inputStream = FQDNGuardConfigLoader.class.getResourceAsStream(DEFAULT_CONFIG_RESOURCE)) {
+    try (InputStream inputStream =
+        FQDNGuardConfigLoader.class.getResourceAsStream(DEFAULT_CONFIG_RESOURCE)) {
       if (inputStream == null) {
         throw new IOException("Default config resource not found: " + DEFAULT_CONFIG_RESOURCE);
       }
@@ -86,7 +87,7 @@ final class FQDNGuardConfigLoader {
   /**
    * YAML 設定ファイルを読み込んで設定値へ変換する。
    *
-   * @param configPath    読み込む設定ファイルパス
+   * @param configPath 読み込む設定ファイルパス
    * @param defaultConfig 未指定項目に使用するデフォルト設定
    * @return 読み込んだ設定
    * @throws IOException 設定ファイルを読み込めない場合
@@ -99,7 +100,7 @@ final class FQDNGuardConfigLoader {
   /**
    * YAML 設定の行リストから、このプラグインで使用する設定値を抽出する。
    *
-   * @param lines         YAML 設定ファイルの各行
+   * @param lines YAML 設定ファイルの各行
    * @param defaultConfig 未指定項目に使用するデフォルト設定
    * @return 抽出した設定
    */
@@ -157,7 +158,7 @@ final class FQDNGuardConfigLoader {
    * 許可ホスト候補を正規化し、空でなければ許可ホスト集合へ追加する。
    *
    * @param hosts 追加先の許可ホスト集合
-   * @param host  許可ホスト候補
+   * @param host 許可ホスト候補
    */
   private static void addAllowedHost(Set<String> hosts, String host) {
     String normalizedHost = HostNormalizer.normalize(host);
@@ -170,7 +171,7 @@ final class FQDNGuardConfigLoader {
    * 許可 IP 候補を正規化し、空でなければ許可 IP 集合へ追加する。
    *
    * @param ips 追加先の許可 IP 集合
-   * @param ip  許可 IP 候補
+   * @param ip 許可 IP 候補
    */
   private static void addAllowedIp(Set<String> ips, String ip) {
     String normalizedIp = IpNormalizer.normalize(ip);
