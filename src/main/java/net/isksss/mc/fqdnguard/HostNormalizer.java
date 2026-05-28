@@ -30,4 +30,23 @@ final class HostNormalizer {
       return normalized;
     }
   }
+
+  /**
+   * ホスト名が IP リテラルとして扱える形式かを判定する。
+   *
+   * @param host 判定するホスト名
+   * @return IPv4 または IPv6 リテラルらしい形式の場合は true
+   */
+  static boolean isIpLiteral(String host) {
+    String normalized = normalize(host);
+    if (normalized.isBlank()) {
+      return false;
+    }
+    if (normalized.contains(":")) {
+      return true;
+    }
+    return normalized
+        .chars()
+        .allMatch(character -> Character.isDigit(character) || character == '.');
+  }
 }

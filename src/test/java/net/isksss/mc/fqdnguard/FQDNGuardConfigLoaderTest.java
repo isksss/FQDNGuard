@@ -66,6 +66,7 @@ class FQDNGuardConfigLoaderTest {
         Set.of("mc.example.com", "play.example.com", "xn--r8jz45g.example"),
         config.allowedHosts(),
         "YAML の allowed-hosts は正規化されたホスト集合として読み込まれる必要があります。");
+    assertEquals(Set.of(), config.allowedWildcardHosts(), "通常ホストはワイルドカード集合へ入らない必要があります。");
     assertEquals(
         "Use {allowed_hosts}, not {host}.",
         config.kickMessage(),
@@ -82,7 +83,18 @@ class FQDNGuardConfigLoaderTest {
   @DisplayName("未指定の任意項目はデフォルト設定を使う")
   void parseConfigLinesUsesDefaultValuesForMissingOptionalKeys() {
     FQDNGuardConfig defaultConfig =
-        new FQDNGuardConfig(Set.of("default.example.com"), Set.of(), "Default {host}", true);
+        new FQDNGuardConfig(
+            Set.of("default.example.com"),
+            Set.of(),
+            Set.of(),
+            Set.of(),
+            "Default {host}",
+            "",
+            "",
+            "",
+            true,
+            false,
+            Set.of());
 
     FQDNGuardConfig config =
         FQDNGuardConfigLoader.parseConfigLines(
@@ -93,6 +105,35 @@ class FQDNGuardConfigLoaderTest {
     assertEquals(
         "Default {host}", config.kickMessage(), "kick-message が未指定の場合はデフォルト設定の値を使う必要があります。");
     assertTrue(config.logRejections(), "log-rejections が未指定の場合はデフォルト設定の値を使う必要があります。");
+  }
+
+  /**
+   * YAML の許可ホストでワイルドカードが読み込まれ、通常ホストとは別に保持されることを確認する。
+   *
+   * <p>期待結果: {@code *.example.com} は suffix の {@code example.com} として読み込まれる。
+   */
+  @Test
+  @DisplayName("YAML のワイルドカード許可ホストを読み込む")
+  void loadParsesWildcardHosts() throws IOException {
+    Path configPath = temporaryDirectory.resolve("fqdn-guard.yml");
+    Files.writeString(
+        configPath,
+        """
+        allowed-hosts:
+          - mc.example.com
+          - "*.example.com"
+          - "*bad.example.com"
+        """,
+        StandardCharsets.UTF_8);
+
+    FQDNGuardConfig config = FQDNGuardConfigLoader.load(temporaryDirectory);
+
+    assertEquals(Set.of("mc.example.com"), config.allowedHosts(), "通常ホストは完全一致集合へ入る必要があります。");
+    assertEquals(
+        Set.of("example.com"), config.allowedWildcardHosts(), "ワイルドカードホストは suffix で保持される必要があります。");
+    assertTrue(
+        config.validationWarnings().stream().anyMatch(warning -> warning.contains("wildcard")),
+        "不正なワイルドカードホストは警告として記録される必要があります。");
   }
 
   /**
@@ -121,6 +162,40 @@ class FQDNGuardConfigLoaderTest {
         Set.of("127.0.0.1", "0:0:0:0:0:0:0:1"),
         config.allowedIps(),
         "YAML の allowed-ips は正規化された IP 集合として読み込まれる必要があります。");
+  }
+
+  /**
+   * YAML の CIDR 許可 IP 範囲が読み込まれ、不正な範囲が警告になることを確認する。
+   *
+   * <p>期待結果: 正しい CIDR だけが許可範囲に追加される。
+   */
+  @Test
+  @DisplayName("YAML の許可 IP 範囲を読み込む")
+  void loadParsesAllowedIpRanges() throws IOException {
+    Path configPath = temporaryDirectory.resolve("fqdn-guard.yml");
+    Files.writeString(
+        configPath,
+        """
+        allowed-hosts:
+          - mc.example.com
+        allowed-ip-ranges:
+          - 192.168.0.0/24
+          - 2001:db8::/32
+          - 192.168.0.0/33
+        """,
+        StandardCharsets.UTF_8);
+
+    FQDNGuardConfig config = FQDNGuardConfigLoader.load(temporaryDirectory);
+
+    assertEquals(
+        Set.of("192.168.0.0/24", "2001:db8::/32"),
+        config.allowedIpRanges().stream()
+            .map(CidrRange::value)
+            .collect(java.util.stream.Collectors.toSet()),
+        "正しい CIDR だけが読み込まれる必要があります。");
+    assertTrue(
+        config.validationWarnings().stream().anyMatch(warning -> warning.contains("IP range")),
+        "不正な CIDR は警告として記録される必要があります。");
   }
 
   /**

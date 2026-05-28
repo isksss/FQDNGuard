@@ -1,14 +1,27 @@
 # FQDNs that players are allowed to use when joining.
+# Use "*.example.com" to allow subdomains only. Add "example.com" separately for the apex domain.
 allowed-hosts:
   - mc.example.com
-  # - play.example.com
+  # - "*.example.com"
 
 # Source IP addresses that are allowed even when the joined host is not allowed.
 allowed-ips:
   - 127.0.0.1
 
-# Placeholders: {host}, {allowed_hosts}
+# Source IP ranges that are allowed even when the joined host is not allowed.
+allowed-ip-ranges:
+  # - 192.168.0.0/24
+  # - 2001:db8::/32
+
+# Common fallback message. Placeholders: {host}, {allowed_hosts}, {remote_ip}, {reason}
 kick-message: "Please connect through {allowed_hosts}. Direct IP connections are not allowed."
+
+kick-message-direct-ip: "Direct IP connections are not allowed. Please connect through {allowed_hosts}."
+kick-message-missing-host: "Could not verify the connection host. Please connect through {allowed_hosts}."
+kick-message-disallowed-host: "Host {host} is not allowed. Please connect through {allowed_hosts}."
 
 # Log rejected connection attempts to the proxy console.
 log-rejections: true
+
+# Log connections allowed by allowed-ips or allowed-ip-ranges.
+log-allowed-ip-bypasses: false

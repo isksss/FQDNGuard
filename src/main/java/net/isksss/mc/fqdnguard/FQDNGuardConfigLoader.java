@@ -16,10 +16,26 @@ final class FQDNGuardConfigLoader {
   private static final String DEFAULT_CONFIG_RESOURCE = "/" + CONFIG_FILE_NAME;
   private static final String ALLOWED_HOSTS_KEY = "allowed-hosts";
   private static final String ALLOWED_IPS_KEY = "allowed-ips";
+  private static final String ALLOWED_IP_RANGES_KEY = "allowed-ip-ranges";
   private static final String KICK_MESSAGE_KEY = "kick-message";
+  private static final String DIRECT_IP_KICK_MESSAGE_KEY = "kick-message-direct-ip";
+  private static final String MISSING_HOST_KICK_MESSAGE_KEY = "kick-message-missing-host";
+  private static final String DISALLOWED_HOST_KICK_MESSAGE_KEY = "kick-message-disallowed-host";
   private static final String LOG_REJECTIONS_KEY = "log-rejections";
+  private static final String LOG_ALLOWED_IP_BYPASSES_KEY = "log-allowed-ip-bypasses";
   private static final FQDNGuardConfig EMPTY_DEFAULT =
-      new FQDNGuardConfig(Collections.emptySet(), Collections.emptySet(), "", false);
+      new FQDNGuardConfig(
+          Collections.emptySet(),
+          Collections.emptySet(),
+          Collections.emptySet(),
+          Collections.emptySet(),
+          "",
+          "",
+          "",
+          "",
+          false,
+          false,
+          Collections.emptySet());
 
   private FQDNGuardConfigLoader() {}
 
@@ -40,12 +56,19 @@ final class FQDNGuardConfigLoader {
     }
 
     FQDNGuardConfig config = parseConfig(configPath, defaultConfig);
-    if (config.allowedHosts().isEmpty()) {
+    if (config.allowedHosts().isEmpty() && config.allowedWildcardHosts().isEmpty()) {
       return new FQDNGuardConfig(
           defaultConfig.allowedHosts(),
+          defaultConfig.allowedWildcardHosts(),
           config.allowedIps(),
+          config.allowedIpRanges(),
           config.kickMessage(),
-          config.logRejections());
+          config.directIpKickMessage(),
+          config.missingHostKickMessage(),
+          config.disallowedHostKickMessage(),
+          config.logRejections(),
+          config.logAllowedIpBypasses(),
+          config.validationWarnings());
     }
     return config;
   }
@@ -106,9 +129,16 @@ final class FQDNGuardConfigLoader {
    */
   static FQDNGuardConfig parseConfigLines(List<String> lines, FQDNGuardConfig defaultConfig) {
     Set<String> hosts = new LinkedHashSet<>();
+    Set<String> wildcardHosts = new LinkedHashSet<>();
     Set<String> ips = new LinkedHashSet<>();
+    Set<CidrRange> ipRanges = new LinkedHashSet<>();
+    Set<String> warnings = new LinkedHashSet<>();
     String configuredKickMessage = defaultConfig.kickMessage();
+    String configuredDirectIpKickMessage = defaultConfig.directIpKickMessage();
+    String configuredMissingHostKickMessage = defaultConfig.missingHostKickMessage();
+    String configuredDisallowedHostKickMessage = defaultConfig.disallowedHostKickMessage();
     boolean configuredLogRejections = defaultConfig.logRejections();
+    boolean configuredLogAllowedIpBypasses = defaultConfig.logAllowedIpBypasses();
     String currentListKey = "";
 
     for (String line : lines) {
@@ -118,11 +148,14 @@ final class FQDNGuardConfigLoader {
       }
 
       if (value.startsWith("-")) {
-        if (ALLOWED_HOSTS_KEY.equals(currentListKey)) {
-          addAllowedHost(hosts, unquote(value.substring(1).trim()));
-        } else if (ALLOWED_IPS_KEY.equals(currentListKey)) {
-          addAllowedIp(ips, unquote(value.substring(1).trim()));
-        }
+        addListValue(
+            currentListKey,
+            unquote(value.substring(1).trim()),
+            hosts,
+            wildcardHosts,
+            ips,
+            ipRanges,
+            warnings);
         continue;
       }
 
@@ -136,48 +169,95 @@ final class FQDNGuardConfigLoader {
       String rawValue = unquote(value.substring(separatorIndex + 1).trim());
       currentListKey = rawValue.isEmpty() ? key : "";
 
-      if (ALLOWED_HOSTS_KEY.equals(key) && !rawValue.isEmpty()) {
-        addAllowedHost(hosts, rawValue);
-      } else if (ALLOWED_IPS_KEY.equals(key) && !rawValue.isEmpty()) {
-        addAllowedIp(ips, rawValue);
-      } else if (KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
+      if (!rawValue.isEmpty()) {
+        addListValue(key, rawValue, hosts, wildcardHosts, ips, ipRanges, warnings);
+      }
+      if (KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
         configuredKickMessage = rawValue;
+      } else if (DIRECT_IP_KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
+        configuredDirectIpKickMessage = rawValue;
+      } else if (MISSING_HOST_KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
+        configuredMissingHostKickMessage = rawValue;
+      } else if (DISALLOWED_HOST_KICK_MESSAGE_KEY.equals(key) && !rawValue.isEmpty()) {
+        configuredDisallowedHostKickMessage = rawValue;
       } else if (LOG_REJECTIONS_KEY.equals(key) && !rawValue.isEmpty()) {
         configuredLogRejections = Boolean.parseBoolean(rawValue);
+      } else if (LOG_ALLOWED_IP_BYPASSES_KEY.equals(key) && !rawValue.isEmpty()) {
+        configuredLogAllowedIpBypasses = Boolean.parseBoolean(rawValue);
       }
     }
 
     return new FQDNGuardConfig(
         Collections.unmodifiableSet(hosts),
+        Collections.unmodifiableSet(wildcardHosts),
         Collections.unmodifiableSet(ips),
+        Collections.unmodifiableSet(ipRanges),
         configuredKickMessage,
-        configuredLogRejections);
+        configuredDirectIpKickMessage,
+        configuredMissingHostKickMessage,
+        configuredDisallowedHostKickMessage,
+        configuredLogRejections,
+        configuredLogAllowedIpBypasses,
+        Collections.unmodifiableSet(warnings));
   }
 
-  /**
-   * 許可ホスト候補を正規化し、空でなければ許可ホスト集合へ追加する。
-   *
-   * @param hosts 追加先の許可ホスト集合
-   * @param host 許可ホスト候補
-   */
-  private static void addAllowedHost(Set<String> hosts, String host) {
-    String normalizedHost = HostNormalizer.normalize(host);
-    if (!normalizedHost.isBlank()) {
-      hosts.add(normalizedHost);
+  private static void addListValue(
+      String key,
+      String value,
+      Set<String> hosts,
+      Set<String> wildcardHosts,
+      Set<String> ips,
+      Set<CidrRange> ipRanges,
+      Set<String> warnings) {
+    if (ALLOWED_HOSTS_KEY.equals(key)) {
+      addAllowedHost(hosts, wildcardHosts, warnings, value);
+    } else if (ALLOWED_IPS_KEY.equals(key)) {
+      addAllowedIp(ips, value);
+    } else if (ALLOWED_IP_RANGES_KEY.equals(key)) {
+      addAllowedIpRange(ipRanges, warnings, value);
     }
   }
 
-  /**
-   * 許可 IP 候補を正規化し、空でなければ許可 IP 集合へ追加する。
-   *
-   * @param ips 追加先の許可 IP 集合
-   * @param ip 許可 IP 候補
-   */
+  private static void addAllowedHost(
+      Set<String> hosts, Set<String> wildcardHosts, Set<String> warnings, String host) {
+    String normalizedHost = HostNormalizer.normalize(host);
+    if (normalizedHost.isBlank()) {
+      warnings.add("Ignored blank allowed host.");
+      return;
+    }
+    if (normalizedHost.contains("*")) {
+      addAllowedWildcardHost(wildcardHosts, warnings, normalizedHost);
+      return;
+    }
+    hosts.add(normalizedHost);
+  }
+
+  private static void addAllowedWildcardHost(
+      Set<String> wildcardHosts, Set<String> warnings, String host) {
+    if (!host.startsWith("*.") || host.indexOf('*', 1) >= 0 || host.length() <= 2) {
+      warnings.add("Ignored invalid wildcard host: " + host);
+      return;
+    }
+    String suffix = HostNormalizer.normalize(host.substring(2));
+    if (suffix.isBlank() || suffix.contains("*")) {
+      warnings.add("Ignored invalid wildcard host: " + host);
+      return;
+    }
+    wildcardHosts.add(suffix);
+  }
+
   private static void addAllowedIp(Set<String> ips, String ip) {
     String normalizedIp = IpNormalizer.normalize(ip);
     if (!normalizedIp.isBlank()) {
       ips.add(normalizedIp);
     }
+  }
+
+  private static void addAllowedIpRange(
+      Set<CidrRange> ipRanges, Set<String> warnings, String range) {
+    CidrRange.parse(range)
+        .ifPresentOrElse(
+            ipRanges::add, () -> warnings.add("Ignored invalid allowed IP range: " + range));
   }
 
   /**
