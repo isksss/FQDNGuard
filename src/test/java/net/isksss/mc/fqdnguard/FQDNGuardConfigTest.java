@@ -23,12 +23,46 @@ class FQDNGuardConfigTest {
         new FQDNGuardConfig(
             new LinkedHashSet<>(Arrays.asList("mc.example.com", "play.example.com")),
             new LinkedHashSet<>(),
+            new LinkedHashSet<>(),
+            new LinkedHashSet<>(),
             "Use {allowed_hosts}. You used {host}.",
-            true);
+            "",
+            "",
+            "",
+            true,
+            false,
+            new LinkedHashSet<>());
 
     assertEquals(
         "Use mc.example.com, play.example.com. You used direct.example.com.",
-        config.formatKickMessage("direct.example.com"),
+        config.formatKickMessage(
+            RejectionReason.DISALLOWED_HOST, "direct.example.com", "203.0.113.10"),
         "キックメッセージ内の {allowed_hosts} と {host} は実際の値へ置換される必要があります。");
+  }
+
+  /**
+   * ワイルドカード許可ホストがサブドメインにだけ一致することを確認する。
+   *
+   * <p>期待結果: {@code *.example.com} は {@code play.example.com} に一致し、{@code example.com} には一致しない。
+   */
+  @Test
+  @DisplayName("ワイルドカード許可ホストはサブドメインだけに一致する")
+  void allowsHostMatchesWildcardSubdomainOnly() {
+    FQDNGuardConfig config =
+        new FQDNGuardConfig(
+            new LinkedHashSet<>(),
+            new LinkedHashSet<>(Arrays.asList("example.com")),
+            new LinkedHashSet<>(),
+            new LinkedHashSet<>(),
+            "",
+            "",
+            "",
+            "",
+            true,
+            false,
+            new LinkedHashSet<>());
+
+    assertEquals(true, config.allowsHost("play.example.com"), "サブドメインは許可される必要があります。");
+    assertEquals(false, config.allowsHost("example.com"), "apex ドメインは明示許可が必要です。");
   }
 }

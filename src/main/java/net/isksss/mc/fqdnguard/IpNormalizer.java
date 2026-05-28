@@ -53,7 +53,7 @@ final class IpNormalizer {
    * @param value 判定する文字列
    * @return IPv4 または IPv6 リテラルらしい形式の場合は true
    */
-  private static boolean isIpLiteral(String value) {
+  static boolean isIpLiteral(String value) {
     if (value.contains(":")) {
       return true;
     }
